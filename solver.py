@@ -4,8 +4,7 @@ from utils import is_valid_solution, calculate_happiness
 import sys
 from os.path import basename, normpath
 import glob
-
-
+from collections import defaultdict
 def solve(G, s):
     """
     Args:
@@ -16,6 +15,21 @@ def solve(G, s):
         k: Number of breakout rooms
     """
     pass
+
+"""
+iteration 1:
+rooms = 0
+currRoomstress = s
+
+if edge1Stress < currRoomStress:
+    append to room1
+
+keep iterating until it passes currentRoomStress
+
+
+
+
+"""
 
 
 # Here's an example of how to run your solver.

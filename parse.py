@@ -1,6 +1,5 @@
 import re
 import os
-
 import networkx as nx
 
 import utils
@@ -48,12 +47,16 @@ def read_input_file(path, max_size=None):
             assert tokens[1].isdigit() and int(tokens[1]) < n
             assert bool(re.match(r"(^\d+\.\d{1,3}$|^\d+$)", tokens[2]))
             assert bool(re.match(r"(^\d+\.\d{1,3}$|^\d+$)", tokens[3]))
+<<<<<<< HEAD
             assert 0 <= float(tokens[2]) < 100
             assert 0 <= float(tokens[3]) < 100
 
+=======
+            assert 0 < float(tokens[2]) < 100
+            assert 0 < float(tokens[3]) < 100
+>>>>>>> inputs
         G = nx.parse_edgelist(lines, nodetype=int, data=(("happiness", float),("stress", float),))
         G.add_nodes_from(range(n))
-
         #check completeness and connectivity
         assert nx.is_connected(G)
         assert len(G.edges()) == n*(n-1)//2
