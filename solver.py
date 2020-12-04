@@ -6,6 +6,7 @@ from os.path import basename, normpath
 import glob
 from collections import defaultdict
 from mip import Model, xsum, maximize, BINARY, OptimizationStatus, CBC
+
 def solve(G, s):
     """
     Args:
@@ -26,6 +27,7 @@ def solve(G, s):
 
     
     edges = defaultdict(list) # edges -> dict mapping [(node, neighbor)] = [happiness, stress]
+
     
     for edge in G.edges():
         node, neighbor = edge[0], edge[1]
@@ -51,10 +53,9 @@ def solve(G, s):
 
 
     m = Model(solver_name=CBC)
-    # m.objective = maximize(xsum())
     
     #######################
-    ###### Variables ######
+    ###### Variables 
     #######################
     
     # k is number of rooms where 1 <= k <= n/2
@@ -63,7 +64,7 @@ def solve(G, s):
     x = [[m.add_var(name='(x_' + str(i) + ')^' + str(l), var_type=BINARY) for l in range(k)] for i in range(n)]
     
     #######################
-    ##### Constraints #####
+    ##### Constraints 
     #######################
     """
     n x k matrix
@@ -81,12 +82,14 @@ def solve(G, s):
     # ensures that the sum of the stresses in rooms is valid
     # (x_i)^l * (x_j)^l * s_ij <= s_max / k for all i, j
     # TODO: avoid adding duplicate constraints (i, j) = (j, i)
+    # TODO: python-mip does not allow multiplication of two binary variables.
     for l in range(k):
         m += xsum(x[i][l] * x[j][l] * getStress(i, j) for i in range(n) for j in range(i + 1, n)) <= S_MAX / k
 
-    # optimize for happiness
-    # sum from l=1...k (x_i)^l * (x_j)^l * h_ij OBJ FUNCTION
-    m.objective = maximize(xsum(x[i][l] * x[j][l] + getHappiness(i, j) for l in range(k) for i in range(n) for j in range(i + 1, n)))
+    # optimize for happiness as our objective function
+    # sum from l=1...k (x_i)^l * (x_j)^l * h_ij 
+    # TODO: python-mip does not allow multiplication of two binary variables.
+    m.objective = maximize(xsum(x[i][l] * x[j][l] * getHappiness(i, j) for l in range(k) for i in range(n) for j in range(i + 1, n)))
 
     m.max_gap = 0.05
     status = m.optimize(max_seconds=300)
