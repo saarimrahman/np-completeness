@@ -5,7 +5,9 @@ import sys
 from os.path import basename, normpath
 import glob
 from collections import defaultdict
-from mip import Model, xsum, maximize, BINARY, OptimizationStatus, CBC
+from mip import Model, xsum, maximize, INTEGER, BINARY, OptimizationStatus, CBC
+import math
+import pprint
 
 def solve(G, s):
     """
@@ -14,7 +16,7 @@ def solve(G, s):
         s: stress_budget
     Returns:
        
-    m = Model(sense=MAXIMIZE) D: Dictionary mapping for student to breakout room r e.g. {0:2, 1:0, 2:1, 3:2}
+        D: Dictionary mapping for student to breakout room r e.g. {0:2, 1:0, 2:1, 3:2}
         k: Number of breakout rooms
     """
 
@@ -23,7 +25,7 @@ def solve(G, s):
     # s_ij is stress from i to j (given)
     # h_ij is happines from i to j (given)
     K_UPPER, K_LOWER = n // 2, 2
-    k = K_LOWER
+    k = 3
 
     
     edges = defaultdict(list) # edges -> dict mapping [(node, neighbor)] = [happiness, stress]
@@ -61,7 +63,8 @@ def solve(G, s):
     # k is number of rooms where 1 <= k <= n/2
     
     # x[i][l] = binary variable if student i is in room l
-    x = [[m.add_var(name='(x_' + str(i) + ')^' + str(l), var_type=BINARY) for l in range(k)] for i in range(n)]
+    # x = [[m.add_var(name='(x_' + str(i) + ')^' + str(l), var_type='B') for l in range(k)] for i in range(n)]
+    x = [[m.add_var(name='x_' + str(i) + '_' + str(l), var_type='B') for l in range(k)] for i in range(n)]
     
     #######################
     ##### Constraints 
@@ -77,20 +80,34 @@ def solve(G, s):
     # ensures each student can only be in 1 room
     # sum from l=1...k (x_i)^l = 1 for all i
     for i in range(n):
-        m += xsum(x[i]) == 1
+        m += xsum(x[i][l] for l in range(k)) == 1
 
+    # ensures that rooms have at least 2 people
+    # sum from i=1...n ((x_i)^l) >= 2 for all l
+    for l in range(k):
+        m += xsum(x[i][l] for i in range(n)) >= 2
+        
+    for i in range(n):
+        for j in range(i+1, n):
+            print(i,j)
     # ensures that the sum of the stresses in rooms is valid
     # (x_i)^l * (x_j)^l * s_ij <= s_max / k for all i, j
     # TODO: avoid adding duplicate constraints (i, j) = (j, i)
-    # TODO: python-mip does not allow multiplication of two binary variables.
+    # TODO: find linear approximation to non linear approx
+    divisor = 50
     for l in range(k):
-        m += xsum(x[i][l] * x[j][l] * getStress(i, j) for i in range(n) for j in range(i + 1, n)) <= S_MAX / k
+        # m += xsum(x[i][l].obj * x[j][l].obj * getStress(i, j) for i in range(n) for j in range(i + 1, n)) <= S_MAX / k
+        m += xsum((x[i][l] * getStress(i, j) + x[j][l] * getStress(i, j)) / divisor for i in range(n) for j in range(i + 1, n)) <= S_MAX / k
+            # = 0, 1, 2 . 0 and 2 are fine. 1 is where its wrong. we get a half answer   
+
+    # (x[i][l] * getStress(i, j) + x[j][l] * getStress(i, j)) / 2 <= S_MAX / k
 
     # optimize for happiness as our objective function
     # sum from l=1...k (x_i)^l * (x_j)^l * h_ij 
-    # TODO: python-mip does not allow multiplication of two binary variables.
-    m.objective = maximize(xsum(x[i][l] * x[j][l] * getHappiness(i, j) for l in range(k) for i in range(n) for j in range(i + 1, n)))
+    # m.objective = maximize(xsum(x[i][l].obj * x[j][l].obj * getHappiness(i, j) for l in range(k) for i in range(n) for j in range(i + 1, n)))
+    m.objective = maximize(xsum((x[i][l] * getHappiness(i, j) + x[j][l] * getHappiness(i, j)) for l in range(k) for i in range(n) for j in range(i + 1, n)))
 
+    solution = {}
     m.max_gap = 0.05
     status = m.optimize(max_seconds=300)
     if status == OptimizationStatus.OPTIMAL:
@@ -104,7 +121,14 @@ def solve(G, s):
         for v in m.vars:
             if abs(v.x) > 1e-6: # only printing non-zeros
                 print('{} : {}'.format(v.name, v.x))
-    
+                student_room = v.name.split('_')
+                solution[int(student_room[1])] = int(student_room[2])
+
+    pp = pprint.PrettyPrinter(indent=4)
+    solution = dict(sorted(solution.items(), key=lambda item: item[1]))
+    # pp.pprint(solution)
+    print(solution)
+    return solution, k
 
 
 # Here's an example of how to run your solver.
