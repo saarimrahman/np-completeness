@@ -109,8 +109,9 @@ def solve(G, s):
     n = G.number_of_nodes() # number of students
     S_MAX, K_LOWER, K_UPPER = s, 2, n // 2
     best_D, best_K, best_happiness = {}, K_LOWER, 0
-
+    # k=3
     for k in range(K_LOWER, K_UPPER + 1):
+    # if k == 3:
         D = runSolver(k)
         if D:
             curr_happiness = calculate_happiness(D, G)
@@ -123,23 +124,25 @@ def solve(G, s):
 
 # Usage: python3 solver.py test.in
 
-if __name__ == '__main__':
-    assert len(sys.argv) == 2
-    path = sys.argv[1]
-    G, s = read_input_file(path)
-    D, k = solve(G, s)
-    assert is_valid_solution(D, G, s, k)
-    print("Total Happiness: {}".format(calculate_happiness(D, G)))
-    write_output_file(D, 'outputs/small-1.out')
+# if __name__ == '__main__':
+#     assert len(sys.argv) == 2
+#     path = sys.argv[1]
+#     G, s = read_input_file(path)
+#     D, k = solve(G, s)
+#     assert is_valid_solution(D, G, s, k)
+#     print("Total Happiness: {}".format(calculate_happiness(D, G)))
+#     write_output_file(D, 'outputs/test.out')
 
 
 # For testing a folder of inputs to create a folder of outputs, you can use glob (need to import it)
-# if __name__ == '__main__':
-#     inputs = glob.glob('inputs/*')
-#     for input_path in inputs:
-#         output_path = 'outputs/' + basename(normpath(input_path))[:-3] + '.out'
-#         G, s = read_input_file(input_path)
-#         D, k = solve(G, s)
-#         assert is_valid_solution(D, G, s, k)
-#         happiness = calculate_happiness(D, G)
-#         write_output_file(D, output_path)
+if __name__ == '__main__':
+    assert len(sys.argv) == 2
+    path = sys.argv[1]
+    inputs = glob.glob(path + '*')
+    for input_path in inputs:
+        output_path = 'output/' + basename(normpath(input_path))[:-3] + '.out'
+        G, s = read_input_file(input_path)
+        D, k = solve(G, s)
+        assert is_valid_solution(D, G, s, k)
+        happiness = calculate_happiness(D, G)
+        write_output_file(D, output_path)
