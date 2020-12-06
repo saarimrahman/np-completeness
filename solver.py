@@ -6,8 +6,8 @@ from os.path import basename, normpath
 import glob
 from collections import defaultdict
 from mip import Model, xsum, maximize, INTEGER, BINARY, OptimizationStatus, CBC
+import numpy as np
 import math
-import pprint
 
 def solve(G, s):
     """
@@ -20,65 +20,64 @@ def solve(G, s):
         k: Number of breakout rooms
     """
 
+    def getStress(s1, s2):
+        return G.get_edge_data(s1, s2)['stress']
+
+    def getHappiness(s1, s2):
+        return G.get_edge_data(s1, s2)['happiness']
+
     S_MAX = s
     n = G.number_of_nodes() # number of students
-    # s_ij is stress from i to j (given)
-    # h_ij is happines from i to j (given)
     K_UPPER, K_LOWER = n // 2, 2
-    k = 3
+    k = 8
+    # for k in range(K_LOWER, K_UPPER + 1):
 
     
-    edges = defaultdict(list) # edges -> dict mapping [(node, neighbor)] = [happiness, stress]
-
-    
-    for edge in G.edges():
-        node, neighbor = edge[0], edge[1]
-        happiness = G.edges[node, neighbor]['happiness']
-        stress = G.edges[node, neighbor]['stress']
-        edges[node].append([neighbor, happiness, stress])
-
-        # print("node", node, "neighbor", neighbor, "happiness/stress", happiness / stress)
-        # G.add_edge(node, neighbor, weight=happiness / stress, label='ratio')
-    
-    def getStudentInd(student, room):
-        return x[student][room]
-
-    def getStress(s1, s2):
-        for edge in edges[s1]:
-            if edge[0] == s2:
-                return edge[2]
-        
-    def getHappiness(s1, s2):
-        for edge in edges[s1]:
-            if edge[0] == s2:
-                return edge[1]
-
-
+    # def runSolver(k):
+    #     # return dict, k
     m = Model(solver_name=CBC)
     
     #######################
     ###### Variables 
     #######################
-    
-    # k is number of rooms where 1 <= k <= n/2
-    
-    # x[i][l] = binary variable if student i is in room l
-    # x = [[m.add_var(name='(x_' + str(i) + ')^' + str(l), var_type='B') for l in range(k)] for i in range(n)]
-    x = [[m.add_var(name='x_' + str(i) + '_' + str(l), var_type='B') for l in range(k)] for i in range(n)]
-    
-    #######################
-    ##### Constraints 
-    #######################
+
     """
+    x[s1][r] = binary var if student s1 is in room r
     n x k matrix
-    x[student][room]
-    Room     1 2 3 4   Student
+    Room     0 1 2 3   Student
             [1 0 0 0]    0
-            [1 0 0 0]    1
-            [0 0 1 0]    2
+            [1 1 0 1]    1
+            [1 1 0 1]    2
     """
+    x = [[m.add_var(name='x_{}_{}'.format(i, l), var_type='B') for l in range(k)] for i in range(n)]
+
+    """
+    y[r][s1][s2] = binary var if s1 and s2 are in room r
+    Each entry of s is a sqaure n x n matrix
+            [(0, 0) ... (i, 0)]
+            [ ...   ...   ... ]
+            [(j, 0) ... (i, j)]
+    all entries below the diagonal are repeated. 
+    """
+    
+    y = []
+    for l in range(k):
+        y.append([[m.add_var(name='y_{}_{}_{}'.format(i, j, l), var_type='B') for i in range(n)] for j in range(n)])
+
+    
+    #######################
+    ##### Constraints #####
+    #######################
+
+    # https://cs.stackexchange.com/questions/12102/express-boolean-logic-operations-in-zero-one-integer-linear-programming-ilp?fbclid=IwAR0DTuP7zy4KUkgU_Vxip-21mMd0Gysw_EE1-BwGJtMz3BdPmDbTaAoPGI8
+    for l in range(k):
+        for i in range(n): 
+            for j in range(i + 1, n):
+                m += x[i][l] + x[j][l] - 1 <= y[l][i][j]
+                m += x[i][l] >= y[l][i][j]
+                m += x[j][l] >= y[l][i][j]
+    
     # ensures each student can only be in 1 room
-    # sum from l=1...k (x_i)^l = 1 for all i
     for i in range(n):
         m += xsum(x[i][l] for l in range(k)) == 1
 
@@ -86,26 +85,13 @@ def solve(G, s):
     # sum from i=1...n ((x_i)^l) >= 2 for all l
     for l in range(k):
         m += xsum(x[i][l] for i in range(n)) >= 2
-        
-    for i in range(n):
-        for j in range(i+1, n):
-            print(i,j)
-    # ensures that the sum of the stresses in rooms is valid
-    # (x_i)^l * (x_j)^l * s_ij <= s_max / k for all i, j
-    # TODO: avoid adding duplicate constraints (i, j) = (j, i)
-    # TODO: find linear approximation to non linear approx
-    divisor = 50
+
+    # ensures each room meets stress requirement
     for l in range(k):
-        # m += xsum(x[i][l].obj * x[j][l].obj * getStress(i, j) for i in range(n) for j in range(i + 1, n)) <= S_MAX / k
-        m += xsum((x[i][l] * getStress(i, j) + x[j][l] * getStress(i, j)) / divisor for i in range(n) for j in range(i + 1, n)) <= S_MAX / k
-            # = 0, 1, 2 . 0 and 2 are fine. 1 is where its wrong. we get a half answer   
+        m += xsum(y[l][i][j] * getStress(i, j) for i in range(n) for j in range(i + 1, n)) <= S_MAX / k
 
-    # (x[i][l] * getStress(i, j) + x[j][l] * getStress(i, j)) / 2 <= S_MAX / k
-
-    # optimize for happiness as our objective function
-    # sum from l=1...k (x_i)^l * (x_j)^l * h_ij 
-    # m.objective = maximize(xsum(x[i][l].obj * x[j][l].obj * getHappiness(i, j) for l in range(k) for i in range(n) for j in range(i + 1, n)))
-    m.objective = maximize(xsum((x[i][l] * getHappiness(i, j) + x[j][l] * getHappiness(i, j)) for l in range(k) for i in range(n) for j in range(i + 1, n)))
+    # optimize for happiness
+    m.objective = maximize(xsum(y[l][i][j] * getHappiness(i, j) for l in range(k) for i in range(n) for j in range(i + 1, n)))
 
     solution = {}
     m.max_gap = 0.05
@@ -116,17 +102,18 @@ def solve(G, s):
         print('sol.cost {} found, best possible: {}'.format(m.objective_value, m.objective_bound))
     elif status == OptimizationStatus.NO_SOLUTION_FOUND:
         print('no feasible solution found, lower bound is: {}'.format(m.objective_bound))
+    elif status == OptimizationStatus.INFEASIBLE:
+        print('infeasible: ')
     if status == OptimizationStatus.OPTIMAL or status == OptimizationStatus.FEASIBLE:
         print('solution:')
         for v in m.vars:
             if abs(v.x) > 1e-6: # only printing non-zeros
                 print('{} : {}'.format(v.name, v.x))
                 student_room = v.name.split('_')
-                solution[int(student_room[1])] = int(student_room[2])
+                if student_room[0] == 'x':
+                    solution[int(student_room[1])] = int(student_room[2])
 
-    pp = pprint.PrettyPrinter(indent=4)
     solution = dict(sorted(solution.items(), key=lambda item: item[1]))
-    # pp.pprint(solution)
     print(solution)
     return solution, k
 
