@@ -152,9 +152,9 @@ def solve(G, s):
 
 # For testing a folder of inputs to create a folder of outputs, you can use glob (need to import it)
 # HOW TO RUN: 
-    # VIK - python3 solverg.py large_81_160/
     # KEV - python3 solverg.py large_1_80/
-    # SAAR -python3 solverg.py large_161_242/
+    # VIK - python3 solverg.py large_81_160/
+    # SAAR - python3 solverg.py large_161_242/
 if __name__ == '__main__':
     assert len(sys.argv) == 2
     path = sys.argv[1]
@@ -164,9 +164,9 @@ if __name__ == '__main__':
         # !!!!!
         # CREATE FOLDER IN FILE TREE AND 
         # CHANGE BELOW TO FOLDER NAME
-        # VIK - gurobi_large_81_160_output
-        # KEV - gurobi_large_1_80_output
-        # SAAR - gurobi_large_161_242_output
+        # KEV - gurobi_large_1_80_output/
+        # VIK - gurobi_large_81_160_output/
+        # SAAR - gurobi_large_161_242_output/
         FOLDER_NAME = ...
         output_path =  FOLDER_NAME + basename(normpath(input_path))[:-3] + '.out'
         G, s = read_input_file(input_path)
