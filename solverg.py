@@ -107,20 +107,32 @@ def solve(G, s):
                         solution[int(student_room[1])] = int(student_room[2])
             solution = dict(sorted(solution.items(), key=lambda item: item[1]))
         return solution
-       
+
+
+
+    """
+    K - PRUNING
+    if k = K_UPPER, take the smallest stress pair (i, j) = s_min
+    if s_min > s_max / k -> k is infeasible.
+
+
+    ROOM PRUNING
+    """   
+
     n = G.number_of_nodes() # number of students
     S_MAX, K_LOWER, K_UPPER = s, 2, n // 2
     best_D, best_K, best_happiness = {}, K_LOWER, 0
 
     for k in range(K_LOWER, K_UPPER + 1):
         D = runSolver(k)
-        curr_happiness = calculate_happiness(D, G)
-        print(k, curr_happiness, best_happiness)
-        time.sleep(1)
-        if curr_happiness > best_happiness:
-            best_D = D
-            best_K = k
-            best_happiness = curr_happiness
+        # dict_not_empty = bool(D)
+        if D:
+            return D, k
+        # curr_happiness = calculate_happiness(D, G)
+        # if curr_happiness > best_happiness:
+        #     best_D = D
+        #     best_K = k
+        #     best_happiness = curr_happiness
     print('BEST SOLUTION: {} rooms -'.format(best_K), best_D)
     return best_D, best_K
 
@@ -139,47 +151,26 @@ def solve(G, s):
 
 
 # For testing a folder of inputs to create a folder of outputs, you can use glob (need to import it)
-# python3 solverg.py inputs/
+# HOW TO RUN: 
+    # VIK - python3 solverg.py large_81_160/
+    # KEV - python3 solverg.py large_1_80/
+    # SAAR -python3 solverg.py large_161_242/
 if __name__ == '__main__':
     assert len(sys.argv) == 2
     path = sys.argv[1]
     inputs = glob.glob(path + '*')
 
-    q = Queue()
     for input_path in inputs:
-        output_path = 'outputs2/' + basename(normpath(input_path))[:-3] + '.out'
-        if 'small' in output_path:
-            q.put(output_path)
-
-#     for input_path in inputs:
-#         output_path = 'outputs/' + basename(normpath(input_path))[:-3] + '.out'
-#         if 'medium' in output_path:
-#             q.put(output_path)
-
-#     for input_path in inputs:
-#         output_path = 'outputs/' + basename(normpath(input_path))[:-3] + '.out'
-#         if 'large' in output_path:
-#             q.put(output_path)
-
-    while not q.empty():
-        output_path = q.get()
-        print(output_path)
-        output_file = Path(output_path)
-        D, k = {}, 0
-        file_dne = not output_file.exists()
-        file_empty = output_file.exists() and output_file.stat().st_size == 0
-        if file_empty or file_dne:
-            G, s = read_input_file(input_path)
-            print(output_path)
-            D, k = solve(G, s)
-            assert is_valid_solution(D, G, s, k)
-            happiness = calculate_happiness(D, G)
-            write_output_file(D, output_path)
-
-#     # for input_path in inputs:
-#     #     output_path = 'outputs/' + basename(normpath(input_path))[:-3] + '.out'
-#     #     G, s = read_input_file(input_path)
-#     #     D, k = solve(G, s)
-#     #     assert is_valid_solution(D, G, s, k)
-#     #     happiness = calculate_happiness(D, G)
-#     #     write_output_file(D, output_path)
+        # !!!!!
+        # CREATE FOLDER IN FILE TREE AND 
+        # CHANGE BELOW TO FOLDER NAME
+        # VIK - gurobi_large_81_160_output
+        # KEV - gurobi_large_1_80_output
+        # SAAR - gurobi_large_161_242_output
+        FOLDER_NAME = ...
+        output_path =  FOLDER_NAME + basename(normpath(input_path))[:-3] + '.out'
+        G, s = read_input_file(input_path)
+        D, k = solve(G, s)
+        assert is_valid_solution(D, G, s, k)
+        happiness = calculate_happiness(D, G)
+        write_output_file(D, output_path)
