@@ -72,9 +72,9 @@ def solve(G, s):
         for i in range(n):
             m += xsum(x[i][l] for l in range(k)) == 1
 
-        # ensures that rooms have at least 2 people
+        # ensures that rooms have at least 1 person
         for l in range(k):
-            m += xsum(x[i][l] for i in range(n)) >= 2
+            m += xsum(x[i][l] for i in range(n)) >= 1
 
         # ensures each room meets stress requirement
         for l in range(k):
@@ -107,11 +107,9 @@ def solve(G, s):
             return solution
        
     n = G.number_of_nodes() # number of students
-    S_MAX, K_LOWER, K_UPPER = s, 2, n // 2
+    S_MAX, K_LOWER, K_UPPER = s, 1, n - 1
     best_D, best_K, best_happiness = {}, K_LOWER, 0
-    # k=3
     for k in range(K_LOWER, K_UPPER + 1):
-    # if k == 3:
         D = runSolver(k)
         if D:
             curr_happiness = calculate_happiness(D, G)

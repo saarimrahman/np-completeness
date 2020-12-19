@@ -75,9 +75,9 @@ def solve(G, s):
         for i in range(n):
             m += xsum(x[i][l] for l in range(k)) == 1
 
-        # ensures that rooms have at least 2 people
+        # ensures that rooms have at least 1 person
         for l in range(k):
-            m += xsum(x[i][l] for i in range(n)) >= 2
+            m += xsum(x[i][l] for i in range(n)) >= 1
 
         # ensures each room meets stress requirement
         for l in range(k):
@@ -88,7 +88,7 @@ def solve(G, s):
 
         solution = {}
         m.max_gap = 0.05
-        status = m.optimize(max_seconds=300)
+        status = m.optimize(max_seconds=300) # TRY 60
         if status == OptimizationStatus.OPTIMAL:
             print('optimal solution cost {} found'.format(m.objective_value))
         elif status == OptimizationStatus.FEASIBLE:
@@ -108,31 +108,18 @@ def solve(G, s):
             solution = dict(sorted(solution.items(), key=lambda item: item[1]))
         return solution
 
-
-
-    """
-    K - PRUNING
-    if k = K_UPPER, take the smallest stress pair (i, j) = s_min
-    if s_min > s_max / k -> k is infeasible.
-
-
-    ROOM PRUNING
-    """   
-
     n = G.number_of_nodes() # number of students
-    S_MAX, K_LOWER, K_UPPER = s, 2, n // 2
+    S_MAX, K_LOWER, K_UPPER = s, 2, n - 1
     best_D, best_K, best_happiness = {}, K_LOWER, 0
 
     for k in range(K_LOWER, K_UPPER + 1):
         D = runSolver(k)
-        # dict_not_empty = bool(D)
         if D:
-            return D, k
-        # curr_happiness = calculate_happiness(D, G)
-        # if curr_happiness > best_happiness:
-        #     best_D = D
-        #     best_K = k
-        #     best_happiness = curr_happiness
+            curr_happiness = calculate_happiness(D, G)
+            if curr_happiness > best_happiness:
+                best_D = D
+                best_K = k
+                best_happiness = curr_happiness
     print('BEST SOLUTION: {} rooms -'.format(best_K), best_D)
     return best_D, best_K
 
@@ -167,7 +154,7 @@ if __name__ == '__main__':
         # KEV - gurobi_large_1_80_output/
         # VIK - gurobi_large_81_160_output/
         # SAAR - gurobi_large_161_242_output/
-        FOLDER_NAME = ...
+        FOLDER_NAME = 'corr_large_out/'
         output_path =  FOLDER_NAME + basename(normpath(input_path))[:-3] + '.out'
         G, s = read_input_file(input_path)
         D, k = solve(G, s)
