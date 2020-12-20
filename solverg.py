@@ -154,7 +154,7 @@ if __name__ == '__main__':
         # KEV - gurobi_large_1_80_output/
         # VIK - gurobi_large_81_160_output/
         # SAAR - gurobi_large_161_242_output/
-        FOLDER_NAME = 'corr_large_out/'
+        FOLDER_NAME = 'outputs/'
         output_path =  FOLDER_NAME + basename(normpath(input_path))[:-3] + '.out'
         G, s = read_input_file(input_path)
         D, k = solve(G, s)
